@@ -9,7 +9,7 @@ OBJS = lwp.o round_robin.o magic64.o
 
 all: liblwp.so
 
-test: liblwp.so
+test: liblwp.so test.c
 	$(CC) $(CFLAGS) -o test test.c -I ./include/ -L ./lib/ -llwp
 
 liblwp.so: lib/liblwp.so

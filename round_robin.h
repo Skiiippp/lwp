@@ -14,7 +14,7 @@
 void admit(thread new);
 
 /* Remove the passed context from the scheduler's scheduling pool */
-void remove(thread victim);
+//void remove(thread victim);
 
 /* Return the next thread to be run of NULL if there isn't one */
 thread next();

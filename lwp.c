@@ -1,24 +1,22 @@
 #include <lwp.h>
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <assert.h>
 #include <errno.h>
 #include <stdio.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include <sys/resource.h>
+#include <stdlib.h>
 #include <sys/mman.h>
-#include <assert.h>
+#include <sys/resource.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #include "round_robin.h"
-
 
 /* REMOVE FOR SUBMISSION & TESTING - ONLY FOR LINTER*/
 //#define MAP_ANONYMOUS 0
 //#define MAP_STACK 0
 
 /* If RLIMIT_STACK is unreasonable - 8MB*/
-#define DEF_STACK_SIZE 8*1000*1024
+#define DEF_STACK_SIZE 8 * 1000 * 1024
 
 /* Bytes per word in 64 bit system */
 #define BYTES_PER_WORD 8
@@ -27,7 +25,12 @@
 static scheduler sched = NULL;
 
 /* Round robin scheduler */
-static struct scheduler round_robin = {.init = NULL, .shutdown = NULL, .admit = rr_admit, .remove = rr_remove, .next = rr_next, .qlen = rr_qlen};
+static struct scheduler round_robin = {.init = NULL,
+                                       .shutdown = NULL,
+                                       .admit = rr_admit,
+                                       .remove = rr_remove,
+                                       .next = rr_next,
+                                       .qlen = rr_qlen};
 
 /* Counter for getting thread IDs */
 static unsigned long thread_counter = 0;
@@ -35,18 +38,20 @@ static unsigned long thread_counter = 0;
 /* Currently running thread */
 static thread current_thread = NULL;
 
-/* Head and tail for internal thread linked list for getting tids. Uses lib_one to point to next*/
+/* Head and tail for internal thread linked list for getting tids. Uses lib_one
+ * to point to next*/
 static thread head = NULL, tail = NULL;
 
 /* Number of threads */
 static size_t number_threads = 0;
 
-/* Head and tail for internel waiting thread queue. Uses lib_two to point to next */
+/* Head and tail for internel waiting thread queue. Uses lib_two to point to
+ * next */
 static thread oldest_waiting = NULL, newest_waiting = NULL;
 
-/* Tracking oldest (head) and newest (tail) exited threads. Uses exited to point to next */
+/* Tracking oldest (head) and newest (tail) exited threads. Uses exited to
+ * point to next */
 static thread oldest_exited = NULL, newest_exited = NULL;
-
 
 /* -- Static/Private Functions -- */
 
@@ -60,10 +65,13 @@ static void init_rfile(thread context_ptr, lwpfun fun, void *arg);
 static void lwp_wrap(lwpfun fun, void *arg);
 
 /* Set the value of an address in the stack at the supplied word offset */
-static void set_stack_value_at_offset(thread context_ptr, size_t offset, unsigned long value);
+static void set_stack_value_at_offset(thread context_ptr, size_t offset,
+                                      unsigned long value);
 
-/* Get the address (as unsigned long) of some word offset from the top of the stack */
-static unsigned long get_stack_addr_at_offset(thread context_ptr, size_t offset);
+/* Get the address (as unsigned long) of some word offset from the top of the
+ * stack */
+static unsigned long get_stack_addr_at_offset(thread context_ptr,
+                                              size_t offset);
 
 /* Create a context (ie allocate context struct and stack)*/
 static thread create_context();
@@ -94,14 +102,11 @@ static thread pop_from_waiting_queue();
 
 /* ---- */
 
-
-tid_t lwp_create(lwpfun fun, void *arg)
-{
+tid_t lwp_create(lwpfun fun, void *arg) {
     thread context_ptr;
-    
+
     context_ptr = create_context();
-    if (context_ptr == NULL)
-    {
+    if (context_ptr == NULL) {
         return NO_THREAD;
     }
 
@@ -113,8 +118,7 @@ tid_t lwp_create(lwpfun fun, void *arg)
     init_rfile(context_ptr, fun, arg);
 
     /* Check if we have a scheduler */
-    if (sched == NULL)
-    {
+    if (sched == NULL) {
         lwp_set_scheduler(NULL);
     }
 
@@ -122,45 +126,39 @@ tid_t lwp_create(lwpfun fun, void *arg)
 
     add_to_list(context_ptr);
 
-
     return context_ptr->tid;
 }
 
-void lwp_exit(int status)
-{
+void lwp_exit(int status) {
     current_thread->status = MKTERMSTAT(LWP_TERM, status);
     sched->remove(current_thread);
     add_to_exit_queue(current_thread);
 
     /* Check if there are any blocked threads waiting for exits */
-    if (oldest_waiting != NULL)
-    {
-        /* Pop and deallocate oldest exited thread, and place oldest waiting back in the scheduler */
+    if (oldest_waiting != NULL) {
+        /* Pop and deallocate oldest exited thread, and place oldest waiting
+         * back in the scheduler */
         sched->admit(pop_from_waiting_queue());
     }
 
     lwp_yield();
 }
 
-tid_t lwp_gettid()
-{
-    if (current_thread == NULL)
-    {
+tid_t lwp_gettid() {
+    if (current_thread == NULL) {
         return NO_THREAD;
     }
 
     return current_thread->tid;
 }
 
-void lwp_yield()
-{
+void lwp_yield() {
     thread old_thread;
 
     old_thread = current_thread;
     current_thread = sched->next();
 
-    if (current_thread == NULL)
-    {
+    if (current_thread == NULL) {
         exit(old_thread->status);
     }
 
@@ -173,13 +171,11 @@ void lwp_yield()
     swap_rfiles(&old_thread->state, &current_thread->state);
 }
 
-void lwp_start()
-{
+void lwp_start() {
     thread calling_thread;
 
     /* If user hasn't set scheduler, set it to round robin */
-    if (sched == NULL)
-    {
+    if (sched == NULL) {
         lwp_set_scheduler(NULL);
     }
 
@@ -192,42 +188,35 @@ void lwp_start()
     calling_thread->stack = NULL;
 
     sched->admit(calling_thread);
-    
+
     /* Get state */
     current_thread = calling_thread;
 
     lwp_yield();
 }
 
-tid_t lwp_wait(int *status)
-{
+tid_t lwp_wait(int *status) {
     thread exited = NULL;
     tid_t exited_tid;
 
     /* Should return after either one or two loops */
-    while (exited == NULL)
-    {
-        /* Check if there are terminated threads that haven't been cleaned up */
-        if (oldest_exited != NULL)
-        {
+    while (exited == NULL) {
+        /* Check if there are terminated threads that haven't been cleaned up
+         */
+        if (oldest_exited != NULL) {
             exited = pop_from_exiting_queue();
             exited_tid = exited->tid;
 
-            if (status != NULL)
-            {
+            if (status != NULL) {
                 *status = exited->status;
             }
 
             deallocate_context(exited);
             return exited_tid;
-        }
-        else if (sched->qlen() <= 1)
-        {
+        } else if (sched->qlen() <= 1) {
             /* No threads that could block */
             return NO_THREAD;
-        }
-        else
-        {
+        } else {
             /* Block until lwp_exit() calls us back */
             add_to_waiting_queue(current_thread);
             sched->remove(current_thread);
@@ -239,69 +228,59 @@ tid_t lwp_wait(int *status)
     return (tid_t)(-1);
 }
 
-void lwp_set_scheduler(scheduler fun)
-{
+void lwp_set_scheduler(scheduler fun) {
     scheduler new_scheduler;
     thread temp_thread;
 
-    if (sched == NULL)
-    {
-        if (fun == NULL)
-        {
+    if (sched == NULL) {
+        if (fun == NULL) {
             fun = &round_robin;
         }
         sched = fun;
         return;
     }
 
-    if (fun == NULL)
-    {
+    if (fun == NULL) {
         new_scheduler = &round_robin;
-    }
-    else
-    {
+    } else {
         new_scheduler = fun;
     }
 
-    if (new_scheduler->init != NULL)
-    {
+    if (new_scheduler->init != NULL) {
         new_scheduler->init();
     }
 
-    while (sched->qlen > 0)
-    {
+    while (sched->qlen > 0) {
         temp_thread = sched->next();
         sched->remove(temp_thread);
         new_scheduler->admit(temp_thread);
     }
 
-    if (sched->shutdown != NULL)
-    {
+    if (sched->shutdown != NULL) {
         sched->shutdown();
     }
 
     sched = new_scheduler;
 }
 
-scheduler lwp_get_scheduler()
-{
-    return sched;
-}
+scheduler lwp_get_scheduler() { return sched; }
 
-void init_stack(thread context_ptr)
-{
+void init_stack(thread context_ptr) {
     /* Make a function pointer to lwp_wrap */
     void (*wrapper)(lwpfun, void *) = lwp_wrap;
 
-    /* Set -1 word offset address value to be function pointer to the wrapper */
-    set_stack_value_at_offset(context_ptr, 1, (unsigned long)(uintptr_t)wrapper);
+    /* Set -1 word offset address value to be function pointer to the wrapper
+     */
+    set_stack_value_at_offset(context_ptr, 1,
+                              (unsigned long)(uintptr_t)wrapper);
 
-    /* Set -2 word offset address value to be base ptr, will be 0 word offset address */
-    set_stack_value_at_offset(context_ptr, 2, get_stack_addr_at_offset(context_ptr, 1));
+    /* Set -2 word offset address value to be base ptr, will be 0 word offset
+     * address */
+    set_stack_value_at_offset(context_ptr, 2,
+                              get_stack_addr_at_offset(context_ptr, 1));
 }
 
-static void init_rfile(thread context_ptr, lwpfun fun, void *arg)
-{
+static void init_rfile(thread context_ptr, lwpfun fun, void *arg) {
     /* Get current rfile as a template */
     swap_rfiles(&context_ptr->state, NULL);
 
@@ -314,44 +293,44 @@ static void init_rfile(thread context_ptr, lwpfun fun, void *arg)
     context_ptr->state.rsi = (unsigned long)(uintptr_t)arg;
 }
 
-void set_stack_value_at_offset(thread context_ptr, size_t offset, unsigned long value)
-{
-    //size_t byte_offset = (offset + 1) * BYTES_PER_WORD;
-    context_ptr->stack[context_ptr->stacksize/BYTES_PER_WORD - offset - 1] = value;
+void set_stack_value_at_offset(thread context_ptr, size_t offset,
+                               unsigned long value) {
+    // size_t byte_offset = (offset + 1) * BYTES_PER_WORD;
+    context_ptr->stack[context_ptr->stacksize / BYTES_PER_WORD - offset - 1] =
+        value;
 }
 
-unsigned long get_stack_addr_at_offset(thread context_ptr, size_t offset)
-{
-    //size_t byte_offset = (offset + 1) * BYTES_PER_WORD;
-    return (unsigned long)((uintptr_t)&context_ptr->stack[context_ptr->stacksize/BYTES_PER_WORD - offset - 1]);
+unsigned long get_stack_addr_at_offset(thread context_ptr, size_t offset) {
+    // size_t byte_offset = (offset + 1) * BYTES_PER_WORD;
+    return (
+        unsigned long)((uintptr_t)&context_ptr
+                           ->stack[context_ptr->stacksize / BYTES_PER_WORD -
+                                   offset - 1]);
 }
 
-void lwp_wrap(lwpfun fun, void *arg)
-{
+void lwp_wrap(lwpfun fun, void *arg) {
     /* Call lwp_exit with fun's return value as its arg */
     lwp_exit(fun(arg));
 }
 
-thread create_context()
-{
+thread create_context() {
     thread context_ptr;
-    
+
     context_ptr = (thread)malloc(sizeof(context));
-    if (context_ptr == NULL)
-    {
+    if (context_ptr == NULL) {
         return NULL;
     }
 
     context_ptr->stacksize = get_stack_size();
-    if (context_ptr->stacksize == 0)
-    {
+    if (context_ptr->stacksize == 0) {
         free(context_ptr);
         return NULL;
     }
 
-    context_ptr->stack = (unsigned long *)mmap(NULL, context_ptr->stacksize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
-    if (context_ptr->stack == MAP_FAILED)
-    {
+    context_ptr->stack = (unsigned long *)mmap(
+        NULL, context_ptr->stacksize, PROT_READ | PROT_WRITE,
+        MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
+    if (context_ptr->stack == MAP_FAILED) {
         free(context_ptr);
         return NULL;
     }
@@ -359,39 +338,32 @@ thread create_context()
     return context_ptr;
 }
 
-size_t get_stack_size()
-{
+size_t get_stack_size() {
     unsigned long page_size;
     unsigned long stack_limit;
     struct rlimit limit_info;
 
     page_size = sysconf(_SC_PAGE_SIZE);
-    if (page_size == -1)
-    {
+    if (page_size == -1) {
         return 0;
     }
 
-    if (getrlimit(RLIMIT_STACK, &limit_info) == -1 || limit_info.rlim_cur == RLIM_INFINITY)
-    {
+    if (getrlimit(RLIMIT_STACK, &limit_info) == -1 ||
+        limit_info.rlim_cur == RLIM_INFINITY) {
         stack_limit = DEF_STACK_SIZE;
-    }
-    else
-    {
+    } else {
         stack_limit = limit_info.rlim_cur;
-        stack_limit = ((stack_limit + page_size - 1) / page_size) * page_size;  /* Round up page to nearest page size */
+        stack_limit = ((stack_limit + page_size - 1) / page_size) *
+                      page_size; /* Round up page to nearest page size */
     }
 
     return stack_limit;
 }
 
-void add_to_list(thread new)
-{
-    if (number_threads == 0)
-    {
+void add_to_list(thread new) {
+    if (number_threads == 0) {
         head = new;
-    }
-    else
-    {
+    } else {
         /* lib_one points to next thread in linked list */
         tail->lib_one = new;
     }
@@ -401,19 +373,17 @@ void add_to_list(thread new)
     number_threads++;
 }
 
-void set_tid(thread new)
-{
+void set_tid(thread new) {
     thread_counter++;
     new->tid = (tid_t)thread_counter;
 }
 
-void deallocate_context(thread dead_thread)
-{
-
+void deallocate_context(thread dead_thread) {
 
     /* Deallocate stack if not original thread */
-    if (dead_thread->stack != NULL && munmap((void *)dead_thread->stack, (size_t)dead_thread->stacksize) != 0)
-    {
+    if (dead_thread->stack != NULL &&
+        munmap((void *)dead_thread->stack, (size_t)dead_thread->stacksize) !=
+            0) {
         perror("Failed to dealloc stack");
         return;
     }
@@ -422,51 +392,39 @@ void deallocate_context(thread dead_thread)
     free(dead_thread);
 }
 
-void add_to_exit_queue(thread exited)
-{
+void add_to_exit_queue(thread exited) {
     /* Queue empty */
-    if (oldest_exited == NULL)
-    {
+    if (oldest_exited == NULL) {
         oldest_exited = exited;
-    }
-    else
-    {
+    } else {
         newest_exited->exited = exited;
     }
 
     newest_exited = exited;
-    newest_exited->exited = oldest_exited;  /* Loop around */
+    newest_exited->exited = oldest_exited; /* Loop around */
 }
 
-thread pop_from_exiting_queue()
-{
+thread pop_from_exiting_queue() {
     thread popped_thread;
 
     assert(oldest_exited != NULL);
 
     popped_thread = oldest_exited;
 
-    if (oldest_exited == newest_exited)
-    {
+    if (oldest_exited == newest_exited) {
         oldest_exited = NULL;
         newest_exited = NULL;
-    }
-    else
-    {
+    } else {
         oldest_exited = oldest_exited->lib_two;
     }
 
     return popped_thread;
 }
 
-void add_to_waiting_queue(thread waiting)
-{
-    if (oldest_waiting == NULL)
-    {
+void add_to_waiting_queue(thread waiting) {
+    if (oldest_waiting == NULL) {
         oldest_waiting = waiting;
-    }
-    else
-    {
+    } else {
         newest_waiting->lib_two = waiting;
     }
 
@@ -474,8 +432,7 @@ void add_to_waiting_queue(thread waiting)
     newest_waiting->lib_two = oldest_waiting;
 }
 
-thread pop_from_waiting_queue()
-{
+thread pop_from_waiting_queue() {
     thread popped_thread;
 
     /* Should never be called if queue is empty */
@@ -484,13 +441,10 @@ thread pop_from_waiting_queue()
     popped_thread = oldest_waiting;
 
     /* Check if size of one */
-    if (oldest_waiting == newest_waiting)
-    {
+    if (oldest_waiting == newest_waiting) {
         oldest_waiting = NULL;
         newest_waiting = NULL;
-    }
-    else
-    {
+    } else {
         oldest_waiting = oldest_waiting->lib_two;
     }
 

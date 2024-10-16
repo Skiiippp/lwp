@@ -8,6 +8,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/mman.h>
+#include <assert.h>
 
 #include "round_robin.h"
 
@@ -91,8 +92,8 @@ static void add_to_waiting_queue(thread waiting);
 /* Pop a waiting thread off the waitng thread queue */
 static thread pop_from_waiting_queue();
 
-
 /* ---- */
+
 
 tid_t lwp_create(lwpfun fun, void *arg)
 {
@@ -121,8 +122,6 @@ tid_t lwp_create(lwpfun fun, void *arg)
 
 void lwp_exit(int status)
 {
-    thread  unblocked_thread;
-
     current_thread->status = MKTERMSTAT(LWP_TERM, status);
     sched->remove(current_thread);
     add_to_exit_queue(current_thread);
@@ -144,7 +143,7 @@ tid_t lwp_gettid()
         return NO_THREAD;
     }
 
-    return current_thread;
+    return current_thread->tid;
 }
 
 void lwp_yield()

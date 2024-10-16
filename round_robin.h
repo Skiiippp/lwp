@@ -10,6 +10,10 @@
  *  - tail's next element is head
  */
 
+/* TODO: DELETE */
+thread get_head();
+thread get_tail();
+
 /* Add the passed context to the scheduler's scheduling pool */
 void rr_admit(thread new);
 

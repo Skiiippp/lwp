@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <stddef.h>
 
-static thread head = NULL, tail = NULL;
+static thread rr_head = NULL, rr_tail = NULL;
 static size_t queue_length = 0;
 
 /* -- Static/Private Functions -- */
@@ -13,20 +13,28 @@ static void remove_thread(thread prev_thread, thread this_thread);
 
 /* ---- */
 
+/* TODO: REMOVE */
+thread get_head() { return rr_head; }
+thread get_tail() { return rr_tail; }
+
 void rr_admit(thread new) {
+    thread old_tail;
+
     if (queue_length == 0) {
-        head = new;
+        rr_head = new;
+        rr_tail = new;
     } else {
-        tail->sched_one = new;
+        old_tail = rr_tail;
+        rr_tail = new;
+        old_tail->sched_one = rr_tail;
     }
 
-    tail = new;
-    tail->sched_one = head;
+    rr_tail->sched_one = rr_head;
     queue_length++;
 }
 
 void rr_remove(thread victim) {
-    thread this_thread = head, prev_thread = tail;
+    thread this_thread = rr_head, prev_thread = rr_tail;
 
     assert(queue_length > 0);
 
@@ -43,16 +51,16 @@ void rr_remove(thread victim) {
 }
 
 thread rr_next() {
-    thread next_thread = head;
+    thread next_thread = rr_head;
 
     if (next_thread == NULL) {
         return NULL;
     }
 
-    /* Make new tail = head, new head = old head's next */
-    tail->sched_one = head;
-    head = head->sched_one;
-    tail = next_thread;
+    /* Make new rr_tail = rr_head, new rr_head = old rr_head's next */
+    rr_tail->sched_one = rr_head;
+    rr_head = rr_head->sched_one;
+    rr_tail = next_thread;
 
     return next_thread;
 }
@@ -61,10 +69,16 @@ int rr_qlen() { return queue_length; }
 
 void remove_thread(thread prev_thread, thread this_thread) {
     if (queue_length == 1) {
-        head = NULL;
-        tail = NULL;
+        rr_head = NULL;
+        rr_tail = NULL;
     } else {
         prev_thread->sched_one = this_thread->sched_one;
+
+        if (this_thread == rr_head) {
+            rr_head = rr_head->sched_one;
+        } else if (this_thread == rr_tail) {
+            rr_tail = prev_thread;
+        }
     }
 
     queue_length--;

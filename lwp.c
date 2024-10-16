@@ -130,15 +130,21 @@ tid_t lwp_create(lwpfun fun, void *arg) {
 }
 
 void lwp_exit(int status) {
+    thread unblocked_thread;
+
     current_thread->status = MKTERMSTAT(LWP_TERM, status);
     sched->remove(current_thread);
     add_to_exit_queue(current_thread);
+
+    ////printf("Exiting thread %i\n", current_thread->tid);
 
     /* Check if there are any blocked threads waiting for exits */
     if (oldest_waiting != NULL) {
         /* Pop and deallocate oldest exited thread, and place oldest waiting
          * back in the scheduler */
-        sched->admit(pop_from_waiting_queue());
+        unblocked_thread = pop_from_waiting_queue();
+        // printf("Unblocking thread %i\n", unblocked_thread->tid);
+        sched->admit(unblocked_thread);
     }
 
     lwp_yield();
@@ -157,6 +163,9 @@ void lwp_yield() {
 
     old_thread = current_thread;
     current_thread = sched->next();
+
+    // printf("Thread %i yeilding to %i\n", old_thread->tid,
+    // current_thread->tid);
 
     if (current_thread == NULL) {
         exit(old_thread->status);
@@ -189,8 +198,12 @@ void lwp_start() {
 
     sched->admit(calling_thread);
 
-    /* Get state */
     current_thread = calling_thread;
+
+    add_to_list(calling_thread);
+
+    /* Get state */
+    // swap_rfiles(&calling_thread->state, NULL);
 
     lwp_yield();
 }
@@ -218,6 +231,7 @@ tid_t lwp_wait(int *status) {
             return NO_THREAD;
         } else {
             /* Block until lwp_exit() calls us back */
+            // printf("Blocking thread %i\n", current_thread->tid);
             add_to_waiting_queue(current_thread);
             sched->remove(current_thread);
             lwp_yield();
@@ -276,8 +290,9 @@ void init_stack(thread context_ptr) {
 
     /* Set -2 word offset address value to be base ptr, will be 0 word offset
      * address */
-    set_stack_value_at_offset(context_ptr, 2,
-                              get_stack_addr_at_offset(context_ptr, 1));
+    set_stack_value_at_offset(
+        context_ptr, // size_t byte_offset = (offset + 1) * BYTES_PER_WORD;
+        2, get_stack_addr_at_offset(context_ptr, 1));
 }
 
 static void init_rfile(thread context_ptr, lwpfun fun, void *arg) {
@@ -295,13 +310,11 @@ static void init_rfile(thread context_ptr, lwpfun fun, void *arg) {
 
 void set_stack_value_at_offset(thread context_ptr, size_t offset,
                                unsigned long value) {
-    // size_t byte_offset = (offset + 1) * BYTES_PER_WORD;
     context_ptr->stack[context_ptr->stacksize / BYTES_PER_WORD - offset - 1] =
         value;
 }
 
 unsigned long get_stack_addr_at_offset(thread context_ptr, size_t offset) {
-    // size_t byte_offset = (offset + 1) * BYTES_PER_WORD;
     return (
         unsigned long)((uintptr_t)&context_ptr
                            ->stack[context_ptr->stacksize / BYTES_PER_WORD -
@@ -361,14 +374,18 @@ size_t get_stack_size() {
 }
 
 void add_to_list(thread new) {
+    thread old_tail;
+
     if (number_threads == 0) {
         head = new;
+        tail = new;
     } else {
         /* lib_one points to next thread in linked list */
-        tail->lib_one = new;
+        old_tail = tail;
+        tail = new;
+        old_tail->lib_one = tail;
     }
 
-    tail = new;
     tail->lib_one = head;
     number_threads++;
 }
@@ -393,14 +410,18 @@ void deallocate_context(thread dead_thread) {
 }
 
 void add_to_exit_queue(thread exited) {
+    thread old_exit_tail;
+
     /* Queue empty */
     if (oldest_exited == NULL) {
         oldest_exited = exited;
+        newest_exited = exited;
     } else {
-        newest_exited->exited = exited;
+        old_exit_tail = newest_exited;
+        newest_exited = exited;
+        old_exit_tail->exited = newest_exited;
     }
 
-    newest_exited = exited;
     newest_exited->exited = oldest_exited; /* Loop around */
 }
 
@@ -422,13 +443,17 @@ thread pop_from_exiting_queue() {
 }
 
 void add_to_waiting_queue(thread waiting) {
+    thread old_waiting_tail;
+
     if (oldest_waiting == NULL) {
         oldest_waiting = waiting;
+        newest_waiting = waiting;
     } else {
-        newest_waiting->lib_two = waiting;
+        old_waiting_tail = newest_waiting;
+        newest_waiting = waiting;
+        old_waiting_tail->lib_two = newest_waiting;
     }
 
-    newest_waiting = waiting;
     newest_waiting->lib_two = oldest_waiting;
 }
 

@@ -112,6 +112,12 @@ tid_t lwp_create(lwpfun fun, void *arg)
     init_stack(context_ptr);
     init_rfile(context_ptr, fun, arg);
 
+    /* Check if we have a scheduler */
+    if (sched == NULL)
+    {
+        lwp_set_scheduler(NULL);
+    }
+
     sched->admit(context_ptr);
 
     add_to_list(context_ptr);
@@ -158,6 +164,12 @@ void lwp_yield()
         exit(old_thread->status);
     }
 
+    /*
+    if (old_thread == NULL)
+    {
+        swap_rfiles(NULL, &current_thread->state);
+    }*/
+
     swap_rfiles(&old_thread->state, &current_thread->state);
 }
 
@@ -176,10 +188,13 @@ void lwp_start()
     thread_counter++;
     calling_thread->tid = (tid_t)thread_counter;
 
-    /* How we tell if a thread is the calling thread */
+    /* How we tell if a thread is the original thread */
     calling_thread->stack = NULL;
 
     sched->admit(calling_thread);
+    
+    /* Get state */
+    current_thread = calling_thread;
 
     lwp_yield();
 }
@@ -229,14 +244,19 @@ void lwp_set_scheduler(scheduler fun)
     scheduler new_scheduler;
     thread temp_thread;
 
+    if (sched == NULL)
+    {
+        if (fun == NULL)
+        {
+            fun = &round_robin;
+        }
+        sched = fun;
+        return;
+    }
+
     if (fun == NULL)
     {
         new_scheduler = &round_robin;
-    }
-    else if (sched == NULL)
-    {
-        sched = fun;
-        return;
     }
     else
     {
@@ -296,14 +316,14 @@ static void init_rfile(thread context_ptr, lwpfun fun, void *arg)
 
 void set_stack_value_at_offset(thread context_ptr, size_t offset, unsigned long value)
 {
-    size_t byte_offset = (offset + 1) * BYTES_PER_WORD;
-    context_ptr->stack[context_ptr->stacksize - byte_offset] = value;
+    //size_t byte_offset = (offset + 1) * BYTES_PER_WORD;
+    context_ptr->stack[context_ptr->stacksize/BYTES_PER_WORD - offset - 1] = value;
 }
 
 unsigned long get_stack_addr_at_offset(thread context_ptr, size_t offset)
 {
-    size_t byte_offset = (offset + 1) * BYTES_PER_WORD;
-    return (unsigned long)((uintptr_t)&context_ptr->stack[context_ptr->stacksize - byte_offset]);
+    //size_t byte_offset = (offset + 1) * BYTES_PER_WORD;
+    return (unsigned long)((uintptr_t)&context_ptr->stack[context_ptr->stacksize/BYTES_PER_WORD - offset - 1]);
 }
 
 void lwp_wrap(lwpfun fun, void *arg)

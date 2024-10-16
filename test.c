@@ -8,8 +8,8 @@
 #define BYTES_PER_WORD 8
 
 /* REMOVE FOR SUBMISSION & TESTING - ONLY FOR LINTER*/
-//#define MAP_ANONYMOUS 0
-// #define MAP_STACK 0
+#define MAP_ANONYMOUS 0
+#define MAP_STACK 0
 
 void test(void *farted);
 

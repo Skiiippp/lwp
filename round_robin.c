@@ -14,7 +14,7 @@ static void remove_thread(thread prev_thread, thread this_thread);
 /* ---- */
 
 
-void admit(thread new)
+void rr_admit(thread new)
 {
     if (queue_length == 0)
     {
@@ -30,7 +30,7 @@ void admit(thread new)
     queue_length++;
 }
 
-void remove(thread victim)
+void rr_remove(thread victim)
 {
     thread this_thread = head, prev_thread = tail;
 
@@ -50,9 +50,14 @@ void remove(thread victim)
     assert(FALSE);
 }
 
-thread next()
+thread rr_next()
 {
     thread next_thread = head;
+
+    if (next_thread == NULL)
+    {
+        return NULL;
+    }
 
     /* Make new tail = head, new head = old head's next */
     tail->sched_one = head;
@@ -62,7 +67,7 @@ thread next()
     return next_thread;
 }
 
-int qlen()
+int rr_qlen()
 {
     return queue_length;
 }

@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = -Wall -g
+CFLAGS = -Wall -g -O0
 
 SOURCES = lwp.c round_robin.c magic64.S
 HEADERS = round_robin.h

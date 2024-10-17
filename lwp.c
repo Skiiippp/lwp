@@ -245,6 +245,7 @@ tid_t lwp_wait(int *status) {
 void lwp_set_scheduler(scheduler fun) {
     scheduler new_scheduler;
     thread temp_thread;
+    size_t thread_transfer_counter;
 
     if (sched == NULL) {
         if (fun == NULL) {
@@ -264,10 +265,12 @@ void lwp_set_scheduler(scheduler fun) {
         new_scheduler->init();
     }
 
-    while (sched->qlen() > 0) {
+    thread_transfer_counter = sched->qlen();
+    while (thread_transfer_counter > 0) {
         temp_thread = sched->next();
         sched->remove(temp_thread);
         new_scheduler->admit(temp_thread);
+        thread_transfer_counter--;
     }
 
     if (sched->shutdown != NULL) {

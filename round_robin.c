@@ -13,9 +13,6 @@ static void remove_thread(thread prev_thread, thread this_thread);
 
 /* ---- */
 
-/* TODO: REMOVE */
-thread get_head() { return rr_head; }
-thread get_tail() { return rr_tail; }
 
 void rr_admit(thread new) {
     thread old_tail;

@@ -264,7 +264,7 @@ void lwp_set_scheduler(scheduler fun) {
         new_scheduler->init();
     }
 
-    while (sched->qlen > 0) {
+    while (sched->qlen() > 0) {
         temp_thread = sched->next();
         sched->remove(temp_thread);
         new_scheduler->admit(temp_thread);

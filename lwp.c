@@ -9,8 +9,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-//#include "round_robin.h"
-#include "rr.h"
+#include "round_robin.h"
 
 /* REMOVE FOR SUBMISSION & TESTING - ONLY FOR LINTER*/
 //#define MAP_ANONYMOUS 0
@@ -26,13 +25,13 @@
 static scheduler sched = NULL;
 
 /* Round robin scheduler */
-/*static struct scheduler round_robin = {.init = NULL,
+static struct scheduler round_robin = {.init = NULL,
                                        .shutdown = NULL,
                                        .admit = rr_admit,
                                        .remove = rr_remove,
                                        .next = rr_next,
                                        .qlen = rr_qlen};
-                                       */
+                                       
 
 /* Counter for getting thread IDs */
 static unsigned long thread_counter = 0;
@@ -258,7 +257,7 @@ void lwp_set_scheduler(scheduler fun) {
     if (sched == NULL) {
         if (fun == NULL) {
             // fun = &round_robin;
-            fun = AltRoundRobin;
+            fun = &round_robin;
         }
         sched = fun;
         return;
@@ -270,7 +269,7 @@ void lwp_set_scheduler(scheduler fun) {
 
     if (fun == NULL) {
         // new_scheduler = &round_robin;
-        new_scheduler = AltRoundRobin;
+        new_scheduler = &round_robin;
     } else {
         new_scheduler = fun;
     }

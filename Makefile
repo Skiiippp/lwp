@@ -2,10 +2,10 @@ CC = gcc
 
 CFLAGS = -fPIC -Wall -g -O0 -std=gnu99
 
-SOURCES = lwp.c round_robin.c magic64.S rr.c
-HEADERS = round_robin.h rr.h
+SOURCES = lwp.c round_robin.c magic64.S 
+HEADERS = round_robin.h 
 
-OBJS = lwp.o round_robin.o magic64.o rr.o
+OBJS = lwp.o round_robin.o magic64.o
 
 all: liblwp.so
 

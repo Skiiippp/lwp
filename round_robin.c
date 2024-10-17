@@ -49,15 +49,14 @@ void rr_remove(thread victim) {
 
 thread rr_next() {
     thread next_thread = rr_head;
+    thread next_prev_thread = rr_tail;
 
     if (next_thread == NULL) {
         return NULL;
     }
 
-    /* Make new rr_tail = rr_head, new rr_head = old rr_head's next */
-    rr_tail->sched_one = rr_head;
-    rr_head = rr_head->sched_one;
-    rr_tail = next_thread;
+    /* Remove next thread. Its prev is the tail */
+    remove_thread(next_prev_thread, next_thread);
 
     return next_thread;
 }

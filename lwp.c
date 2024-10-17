@@ -161,6 +161,12 @@ tid_t lwp_gettid() {
 void lwp_yield() {
     thread old_thread;
 
+    /*
+    old_thread = current_thread;
+    current_thread = sched->next();
+    sched->remove(current_thread);
+    sched->admit(old_thread);
+    */
     old_thread = current_thread;
     current_thread = sched->next();
 
@@ -255,6 +261,11 @@ void lwp_set_scheduler(scheduler fun) {
         return;
     }
 
+    if (fun == sched)
+    {
+        return;
+    }
+
     if (fun == NULL) {
         new_scheduler = &round_robin;
     } else {
@@ -265,7 +276,9 @@ void lwp_set_scheduler(scheduler fun) {
         new_scheduler->init();
     }
 
-    thread_transfer_counter = sched->qlen();
+    thread_transfer_counter = sched->qlen() - 1;
+    new_scheduler->admit(current_thread);
+    sched->remove(current_thread);
     while (thread_transfer_counter > 0) {
         temp_thread = sched->next();
         sched->remove(temp_thread);

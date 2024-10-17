@@ -31,7 +31,6 @@ static struct scheduler round_robin = {.init = NULL,
                                        .remove = rr_remove,
                                        .next = rr_next,
                                        .qlen = rr_qlen};
-                                       
 
 /* Counter for getting thread IDs */
 static unsigned long thread_counter = 0;
@@ -276,12 +275,9 @@ void lwp_set_scheduler(scheduler fun) {
         new_scheduler->init();
     }
 
-    if (current_thread == NULL)
-    {
+    if (current_thread == NULL) {
         thread_transfer_counter = sched->qlen();
-    }
-    else
-    {
+    } else {
         new_scheduler->admit(current_thread);
         sched->remove(current_thread);
         thread_transfer_counter = sched->qlen() - 1;

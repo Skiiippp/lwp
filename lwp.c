@@ -34,8 +34,6 @@ static scheduler sched = NULL;
                                        .qlen = rr_qlen};
                                        */
 
-
-
 /* Counter for getting thread IDs */
 static unsigned long thread_counter = 0;
 
@@ -259,20 +257,19 @@ void lwp_set_scheduler(scheduler fun) {
 
     if (sched == NULL) {
         if (fun == NULL) {
-            //fun = &round_robin;
+            // fun = &round_robin;
             fun = AltRoundRobin;
         }
         sched = fun;
         return;
     }
 
-    if (fun == sched)
-    {
+    if (fun == sched) {
         return;
     }
 
     if (fun == NULL) {
-        //new_scheduler = &round_robin;
+        // new_scheduler = &round_robin;
         new_scheduler = AltRoundRobin;
     } else {
         new_scheduler = fun;

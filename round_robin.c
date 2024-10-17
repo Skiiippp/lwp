@@ -13,7 +13,6 @@ static void remove_thread(thread prev_thread, thread this_thread);
 
 /* ---- */
 
-
 void rr_admit(thread new) {
     thread old_tail;
 

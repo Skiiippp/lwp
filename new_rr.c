@@ -13,7 +13,6 @@ static void remove_thread(thread prev_thread, thread this_thread);
 
 /* ---- */
 
-
 void new_rr_admit(thread new) {
     thread old_tail;
 
@@ -54,7 +53,8 @@ thread new_rr_next() {
         return NULL;
     }
 
-    /* Make new new_rr_tail = new_rr_head, new new_rr_head = old new_rr_head's next */
+    /* Make new new_rr_tail = new_rr_head, new new_rr_head = old new_rr_head's
+     * next */
     new_rr_tail->sched_one = new_rr_head;
     new_rr_head = new_rr_head->sched_one;
     new_rr_tail = next_thread;

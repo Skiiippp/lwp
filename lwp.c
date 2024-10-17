@@ -260,6 +260,12 @@ void lwp_set_scheduler(scheduler fun) {
     /* Check if the current scheduler is NULL - Set sched to new_scheduler and
      * return*/
     if (old_scheduler == NULL) {
+        /* Check if we need to initialize sched */
+        if (new_scheduler->init != NULL)
+        {
+            new_scheduler->init();
+        }
+
         sched = new_scheduler;
         return;
     }

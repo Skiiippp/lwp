@@ -3,7 +3,7 @@ CC = gcc
 CFLAGS = -fPIC -Wall -g -O0 -std=gnu99
 
 SOURCES = lwp.c round_robin.c magic64.S
-HEADERS = lwp.h schedulers.h snakes.h util.h round_robin.h 
+HEADERS = lwp.h schedulers.h fp.h util.h round_robin.h 
 
 OBJS = lwp.o round_robin.o magic64.o
 

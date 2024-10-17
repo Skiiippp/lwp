@@ -18,4 +18,4 @@ liblwp.so: $(OBJS)
 clean:
 	rm -rf *.o liblwp.so test
 
-.PHONY: all clean
+.PHONY: all

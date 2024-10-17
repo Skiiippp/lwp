@@ -5,20 +5,18 @@
 #include <string.h>
 #include <unistd.h>
 #include "lwp.h"
-#include "new_rr.h"
+#include "rr.h"
 
 #define ROUNDS 6
 
 typedef void (*sigfun)(int signum);
 static void indentnum(uintptr_t num);
 
-struct scheduler AltRoundRobin = {.init = NULL, .shutdown = NULL, .admit = new_rr_admit, .next = new_rr_next, .remove = new_rr_remove, .qlen = new_rr_qlen};
-
 int main(int argc, char *argv[]){
   long i;
 
   printf("Setting Scheduler\n");
-  lwp_set_scheduler(&AltRoundRobin);
+  lwp_set_scheduler(AltRoundRobin);
 
   printf("Creating LWPS\n");
   /* spawn a number of individual LWPs */
@@ -47,7 +45,7 @@ static void indentnum(uintptr_t num) {
     printf("%*d\n",howfar*5,howfar);
     if ( num == 5 && i == 2 ) { /* end of third round */
       printf("Setting the scheduler to itself.\n");
-      lwp_set_scheduler(&AltRoundRobin);
+      lwp_set_scheduler(AltRoundRobin);
     }
 
     lwp_yield();                /* let another have a turn */

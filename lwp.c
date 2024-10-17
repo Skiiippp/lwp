@@ -11,10 +11,6 @@
 
 #include "round_robin.h"
 
-/* REMOVE FOR SUBMISSION & TESTING - ONLY FOR LINTER*/
-//#define MAP_ANONYMOUS 0
-//#define MAP_STACK 0
-
 /* If RLIMIT_STACK is unreasonable - 8MB*/
 #define DEF_STACK_SIZE 8 * 1000 * 1024
 
@@ -52,6 +48,7 @@ static thread oldest_waiting = NULL, newest_waiting = NULL;
 /* Tracking oldest (head) and newest (tail) exited threads. Uses exited to
  * point to next */
 static thread oldest_exited = NULL, newest_exited = NULL;
+
 
 /* -- Static/Private Functions -- */
 
@@ -102,6 +99,7 @@ static thread pop_from_waiting_queue();
 
 /* ---- */
 
+
 tid_t lwp_create(lwpfun fun, void *arg) {
     thread context_ptr;
 
@@ -136,14 +134,12 @@ void lwp_exit(int status) {
     sched->remove(current_thread);
     add_to_exit_queue(current_thread);
 
-    ////printf("Exiting thread %i\n", current_thread->tid);
 
     /* Check if there are any blocked threads waiting for exits */
     if (oldest_waiting != NULL) {
         /* Pop and deallocate oldest exited thread, and place oldest waiting
          * back in the scheduler */
         unblocked_thread = pop_from_waiting_queue();
-        // printf("Unblocking thread %i\n", unblocked_thread->tid);
         sched->admit(unblocked_thread);
     }
 
@@ -161,27 +157,12 @@ tid_t lwp_gettid() {
 void lwp_yield() {
     thread old_thread;
 
-    /*
     old_thread = current_thread;
     current_thread = sched->next();
-    sched->remove(current_thread);
-    sched->admit(old_thread);
-    */
-    old_thread = current_thread;
-    current_thread = sched->next();
-
-    // printf("Thread %i yeilding to %i\n", old_thread->tid,
-    // current_thread->tid);
 
     if (current_thread == NULL) {
         exit(old_thread->status);
     }
-
-    /*
-    if (old_thread == NULL)
-    {
-        swap_rfiles(NULL, &current_thread->state);
-    }*/
 
     swap_rfiles(&old_thread->state, &current_thread->state);
 }
@@ -207,9 +188,6 @@ void lwp_start() {
     current_thread = calling_thread;
 
     add_to_list(calling_thread);
-
-    /* Get state */
-    // swap_rfiles(&calling_thread->state, NULL);
 
     lwp_yield();
 }
@@ -237,7 +215,6 @@ tid_t lwp_wait(int *status) {
             return NO_THREAD;
         } else {
             /* Block until lwp_exit() calls us back */
-            // printf("Blocking thread %i\n", current_thread->tid);
             add_to_waiting_queue(current_thread);
             sched->remove(current_thread);
             lwp_yield();
@@ -283,17 +260,8 @@ void lwp_set_scheduler(scheduler fun) {
     /* While the old scheduler still has threads, admit them to the new
      * scheduler */
     while ((temp_thread = old_scheduler->next()) != NULL) {
-
-        //printf("\nOLD SCHED QLEN: %li\n", old_scheduler->qlen());
-        //printf("NEW SCHED QLEN: %li\n\n", new_scheduler->qlen());
-
-        //temp_thread = old_scheduler->next();
         old_scheduler->remove(temp_thread);
         new_scheduler->admit(temp_thread);
-
-        //printf("\nOLD SCHED QLEN: %li\n", old_scheduler->qlen());
-        //printf("NEW SCHED QLEN: %li\n\n", new_scheduler->qlen());
-
     }
 
     /* Deinitialize old scheduler */
@@ -303,52 +271,6 @@ void lwp_set_scheduler(scheduler fun) {
 
     /* Set global sched to new_scheduler */
     sched = new_scheduler;
-
-    /*
-    scheduler new_scheduler;
-    thread temp_thread;
-    size_t thread_transfer_counter;
-
-    if (sched == NULL) {
-        if (fun == NULL) {
-            fun = &round_robin;
-        }
-        sched = fun;
-        return;
-    }
-
-    if (fun == sched) {
-        return;
-    }
-
-    if (fun == NULL) {
-        new_scheduler = &round_robin;
-    } else {
-        new_scheduler = fun;
-    }
-
-    if (new_scheduler->init != NULL) {
-        new_scheduler->init();
-    }
-
-    if (current_thread != NULL) {
-        new_scheduler->admit(current_thread);
-        sched->remove(current_thread);
-    }
-    thread_transfer_counter = sched->qlen();
-    while (thread_transfer_counter > 0) {
-        temp_thread = sched->next();
-        sched->remove(temp_thread);
-        new_scheduler->admit(temp_thread);
-        thread_transfer_counter--;
-    }
-
-    if (sched->shutdown != NULL) {
-        sched->shutdown();
-    }
-
-    sched = new_scheduler;
-    */
 }
 
 scheduler lwp_get_scheduler() { return sched; }
@@ -392,7 +314,7 @@ void init_stack(thread context_ptr) {
     /* Set -2 word offset address value to be base ptr, will be 0 word offset
      * address */
     set_stack_value_at_offset(
-        context_ptr, // size_t byte_offset = (offset + 1) * BYTES_PER_WORD;
+        context_ptr, 
         2, get_stack_addr_at_offset(context_ptr, 1));
 }
 

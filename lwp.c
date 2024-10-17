@@ -275,14 +275,11 @@ void lwp_set_scheduler(scheduler fun) {
         new_scheduler->init();
     }
 
-    if (current_thread == NULL) {
-        thread_transfer_counter = sched->qlen();
-    } else {
+    if (current_thread != NULL) {
         new_scheduler->admit(current_thread);
         sched->remove(current_thread);
-        thread_transfer_counter = sched->qlen() - 1;
     }
-
+    thread_transfer_counter = sched->qlen();
     while (thread_transfer_counter > 0) {
         temp_thread = sched->next();
         sched->remove(temp_thread);

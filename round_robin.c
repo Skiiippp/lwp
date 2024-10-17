@@ -48,14 +48,13 @@ void rr_remove(thread victim) {
 
 thread rr_next() {
     thread next_thread = rr_head;
-    thread next_prev_thread = rr_tail;
 
     if (next_thread == NULL) {
         return NULL;
     }
 
-    /* Remove next thread. Its prev is the tail */
-    remove_thread(next_prev_thread, next_thread);
+    rr_head = rr_head->sched_one;
+    rr_tail = rr_tail->sched_one;
 
     return next_thread;
 }

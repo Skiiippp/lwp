@@ -256,7 +256,6 @@ void lwp_set_scheduler(scheduler fun) {
 
     if (sched == NULL) {
         if (fun == NULL) {
-            // fun = &round_robin;
             fun = &round_robin;
         }
         sched = fun;
@@ -268,7 +267,6 @@ void lwp_set_scheduler(scheduler fun) {
     }
 
     if (fun == NULL) {
-        // new_scheduler = &round_robin;
         new_scheduler = &round_robin;
     } else {
         new_scheduler = fun;
@@ -278,9 +276,17 @@ void lwp_set_scheduler(scheduler fun) {
         new_scheduler->init();
     }
 
-    thread_transfer_counter = sched->qlen() - 1;
-    new_scheduler->admit(current_thread);
-    sched->remove(current_thread);
+    if (current_thread == NULL)
+    {
+        thread_transfer_counter = sched->qlen();
+    }
+    else
+    {
+        new_scheduler->admit(current_thread);
+        sched->remove(current_thread);
+        thread_transfer_counter = sched->qlen() - 1;
+    }
+
     while (thread_transfer_counter > 0) {
         temp_thread = sched->next();
         sched->remove(temp_thread);

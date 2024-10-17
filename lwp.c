@@ -353,6 +353,32 @@ void lwp_set_scheduler(scheduler fun) {
 
 scheduler lwp_get_scheduler() { return sched; }
 
+thread tid2thread(tid_t tid)
+{
+    thread inc_thread;;
+
+    if (current_thread == NULL)
+    {
+        return NULL;
+    }
+
+    if (current_thread->tid == tid)
+    {
+        return current_thread;
+    }
+
+    inc_thread = current_thread->lib_one;
+    while (inc_thread != current_thread)
+    {
+        if (inc_thread->tid == tid)
+        {
+            return inc_thread;
+        }
+    }
+
+    return NULL;
+}
+
 void init_stack(thread context_ptr) {
     /* Make a function pointer to lwp_wrap */
     void (*wrapper)(lwpfun, void *) = lwp_wrap;

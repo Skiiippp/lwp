@@ -282,10 +282,18 @@ void lwp_set_scheduler(scheduler fun) {
 
     /* While the old scheduler still has threads, admit them to the new
      * scheduler */
-    while (old_scheduler->qlen() > 0) {
-        temp_thread = old_scheduler->next();
+    while ((temp_thread = old_scheduler->next()) != NULL) {
+
+        //printf("\nOLD SCHED QLEN: %li\n", old_scheduler->qlen());
+        //printf("NEW SCHED QLEN: %li\n\n", new_scheduler->qlen());
+
+        //temp_thread = old_scheduler->next();
         old_scheduler->remove(temp_thread);
         new_scheduler->admit(temp_thread);
+
+        //printf("\nOLD SCHED QLEN: %li\n", old_scheduler->qlen());
+        //printf("NEW SCHED QLEN: %li\n\n", new_scheduler->qlen());
+
     }
 
     /* Deinitialize old scheduler */

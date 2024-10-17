@@ -374,6 +374,7 @@ thread tid2thread(tid_t tid)
         {
             return inc_thread;
         }
+        inc_thread = inc_thread->lib_one;
     }
 
     return NULL;

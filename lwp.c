@@ -251,44 +251,39 @@ tid_t lwp_wait(int *status) {
 void lwp_set_scheduler(scheduler fun) {
     scheduler new_scheduler = fun, old_scheduler = sched;
     thread temp_thread;
-    
 
     /* Check if supplied scheduler is NULL - go to round robin */
-    if (new_scheduler == NULL)
-    {
+    if (new_scheduler == NULL) {
         new_scheduler = &round_robin;
     }
 
-    /* Check if the current scheduler is NULL - Set sched to new_scheduler and return*/
-    if (old_scheduler == NULL)
-    {
+    /* Check if the current scheduler is NULL - Set sched to new_scheduler and
+     * return*/
+    if (old_scheduler == NULL) {
         sched = new_scheduler;
         return;
     }
 
     /* Check if the schedulers are the same - return */
-    if (new_scheduler == old_scheduler)
-    {
+    if (new_scheduler == old_scheduler) {
         return;
     }
 
     /* Initialize the new scheduler */
-    if (new_scheduler->init != NULL)
-    {
+    if (new_scheduler->init != NULL) {
         new_scheduler->init();
     }
 
-    /* While the old scheduler still has threads, admit them to the new scheduler */
-    while (old_scheduler->qlen() > 0)
-    {
+    /* While the old scheduler still has threads, admit them to the new
+     * scheduler */
+    while (old_scheduler->qlen() > 0) {
         temp_thread = old_scheduler->next();
         old_scheduler->remove(temp_thread);
         new_scheduler->admit(temp_thread);
     }
 
     /* Deinitialize old scheduler */
-    if (old_scheduler->shutdown != NULL)
-    {
+    if (old_scheduler->shutdown != NULL) {
         old_scheduler->shutdown();
     }
 
